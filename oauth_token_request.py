@@ -200,6 +200,67 @@ def create_conversion_api():
         return jsonify({'error': str(e)}), 500
 
 
+def request_ledger_account(body_json):
+    """
+    Ledger account endpoint
+    :param body_json: JSON format request body containing token and participantCode
+    :return: Response result
+    """
+    url = f'{BASE_URL}/ledger/account'
+    
+    # Convert JSON to dictionary
+    if isinstance(body_json, str):
+        params = json.loads(body_json)
+    else:
+        params = body_json
+    
+    # Get token
+    token = params.get('token', '')
+    if not token:
+        raise ValueError('token cannot be empty')
+    
+    # Get participantCode
+    participant_code = params.get('participantCode', '')
+    if not participant_code:
+        raise ValueError('participantCode cannot be empty')
+    
+    # Prepare headers
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+    
+    # Prepare query parameters
+    query_params = {
+        'participantCode': participant_code
+    }
+    
+    # Send GET request
+    response = requests.get(url, headers=headers, params=query_params)
+    
+    return response
+
+
+@app.route('/ledger/account', methods=['POST'])
+def ledger_account_api():
+    try:
+        body_json = request.get_json()
+        if not body_json:
+            return jsonify({'error': 'Request body cannot be empty'}), 400
+        
+        response = request_ledger_account(body_json)
+        
+        # Filter out headers that should not be passed
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.headers.items() 
+                   if name.lower() not in excluded_headers]
+        
+        return Response(response.content, status=response.status_code, headers=headers)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
